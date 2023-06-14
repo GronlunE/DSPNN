@@ -162,3 +162,73 @@ def sylnet_model(X_in,n_channels=128,dropout_rate=0.5):
     model = Model(inputs=sequence1,outputs=mapper2)
 
     return model
+
+
+def wavenet_model(X_in, n_channels):
+    # Define WaveNet encoder model
+    conv_length = [2, 2, 2, 2, 2]
+    # pooling_length = [1,1,1,1,1]
+    conv_dilation = [1, 2, 4, 8, 16]
+    actreg = 0.0000000001
+    dropout_rate = 0.05
+
+    sequence1 = Input(shape=(X_in.shape[1:]))
+    encoder1 = Conv1D(n_channels,conv_length[0], dilation_rate=conv_dilation[0], activation='sigmoid',padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder2 = Conv1D(n_channels,conv_length[1], dilation_rate=conv_dilation[1], activation='sigmoid',padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder3 = Conv1D(n_channels,conv_length[2], dilation_rate=conv_dilation[2], activation='sigmoid',padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder4 = Conv1D(n_channels,conv_length[3], dilation_rate=conv_dilation[3], activation='sigmoid',padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder5 = Conv1D(n_channels,conv_length[4], dilation_rate=conv_dilation[4], activation='sigmoid',padding='causal', activity_regularizer=regularizers.l2(actreg))
+
+    encoder1_tanh = Conv1D(n_channels, conv_length[0], dilation_rate=conv_dilation[0], activation='tanh', padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder2_tanh = Conv1D(n_channels, conv_length[1], dilation_rate=conv_dilation[1], activation='tanh', padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder3_tanh = Conv1D(n_channels, conv_length[2], dilation_rate=conv_dilation[2], activation='tanh', padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder4_tanh = Conv1D(n_channels, conv_length[3], dilation_rate=conv_dilation[3], activation='tanh', padding='causal', activity_regularizer=regularizers.l2(actreg))
+    encoder5_tanh = Conv1D(n_channels, conv_length[4], dilation_rate=conv_dilation[4], activation='tanh', padding='causal', activity_regularizer=regularizers.l2(actreg))
+
+    skip_scaler1 = TimeDistributed(Dense(n_channels, activation='linear'))
+    skip_scaler2 = TimeDistributed(Dense(n_channels, activation='linear'))
+    skip_scaler3 = TimeDistributed(Dense(n_channels, activation='linear'))
+    skip_scaler4 = TimeDistributed(Dense(n_channels, activation='linear'))
+    skip_scaler5 = TimeDistributed(Dense(n_channels, activation='linear'))
+
+    res_scaler1 = TimeDistributed(Dense(n_channels, activation='linear'))
+    res_scaler2 = TimeDistributed(Dense(n_channels, activation='linear'))
+    res_scaler3 = TimeDistributed(Dense(n_channels, activation='linear'))
+    res_scaler4 = TimeDistributed(Dense(n_channels, activation='linear'))
+
+    post_scaler1 = TimeDistributed(Dense(n_channels, activation='linear'))
+    post_scaler2 = TimeDistributed(Dense(n_channels, activation='linear'))
+    post_scaler3 = TimeDistributed(Dense(n_channels, activation='linear'))
+    post_scaler4 = TimeDistributed(Dense(n_channels, activation='linear'))
+    post_scaler5 = TimeDistributed(Dense(n_channels, activation='linear'))
+
+    summer = keras.layers.Add()
+    multiplier = keras.layers.Multiply()
+
+    do1 = Dropout(dropout_rate)
+    do2 = Dropout(dropout_rate)
+    do3 = Dropout(dropout_rate)
+    do4 = Dropout(dropout_rate)
+    do5 = Dropout(dropout_rate)
+
+    l1_skip = skip_scaler1(do1(multiplier([encoder1(sequence1),encoder1_tanh(sequence1)])))
+    l1_res = res_scaler1(l1_skip)
+    l2_skip = skip_scaler2(do2(multiplier([encoder2(l1_res),encoder2_tanh(l1_res)])))
+    l2_res = res_scaler2(summer([l1_res,l2_skip]))
+    l3_skip = skip_scaler3(do3(multiplier([encoder3(l2_res),encoder3_tanh(l2_res)])))
+    l3_res = res_scaler3(summer([l2_res,l3_skip]))
+    l4_skip = skip_scaler4(do4(multiplier([encoder4(l3_res),encoder4_tanh(l3_res)])))
+    l4_res = res_scaler4(summer([l3_res,l4_skip]))
+    l5_skip = skip_scaler5(do5(multiplier([encoder5(l4_res),encoder5_tanh(l4_res)])))
+
+    convstack_out = summer([post_scaler1(l1_skip),post_scaler2(l2_skip)])
+    convstack_out = summer([convstack_out,post_scaler3(l3_skip)])
+    convstack_out = summer([convstack_out,post_scaler4(l4_skip)])
+    convstack_out = summer([convstack_out,post_scaler5(l5_skip)])
+
+    integrator = TransformerBlock(n_channels, 8, n_channels)(convstack_out)
+    integrator2 = Conv1D(1,X_in.shape[1])(integrator)
+    mapper = Dense(1,activation='sigmoid')(integrator2)
+    model = Model(inputs=sequence1,outputs=mapper)
+
+    return model

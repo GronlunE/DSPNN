@@ -8,10 +8,10 @@ def main():
     """
 
     print("Constructing training data...")
-    tensor, syllables = construct_data(samples=10)
+    tensor, syllables = construct_data(samples=10000)
 
     print("Beginning training...")
-    model, history = netTrain(tensor=tensor,syllables=syllables, epochs=1, batch_size=32, n_channels=32)
+    model, history = netTrain(tensor=tensor,syllables=syllables, epochs=100 , batch_size=32, n_channels=32)
     del tensor, syllables
 
     print("Constructing testing data...")

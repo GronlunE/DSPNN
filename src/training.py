@@ -3,7 +3,7 @@ import tensorflow as tf
 import pandas as pd
 from scipy.io import loadmat
 from config import *
-from neuralnet import sylnet_model, TransformerBlock
+from neuralnet import sylnet_model, TransformerBlock, wavenet_model
 from keras.metrics import MeanAbsoluteError, MeanAbsolutePercentageError
 
 
@@ -22,7 +22,7 @@ def netTrain(tensor, syllables, epochs, batch_size, n_channels):
     print("Tensor dimensions:", np.shape(tensor))
     print("Syllable dimensions:", np.shape(syllables))
 
-    model = sylnet_model(tensor, n_channels)
+    model = wavenet_model(tensor, n_channels)
 
     # Compile the model
     model.compile(
@@ -31,7 +31,7 @@ def netTrain(tensor, syllables, epochs, batch_size, n_channels):
         metrics=[MeanAbsoluteError(), MeanAbsolutePercentageError()]
     )
 
-    earlystop = tf.keras.callbacks.EarlyStopping(monitor='val_mean_absolute_percentage_error', patience=10)
+    earlystop = tf.keras.callbacks.EarlyStopping(monitor='val_mean_absolute_percentage_error', patience=15)
 
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=r"resources/most_recent_model",
@@ -46,7 +46,7 @@ def netTrain(tensor, syllables, epochs, batch_size, n_channels):
                         epochs=epochs,
                         batch_size=batch_size,
                         callbacks=[earlystop, model_checkpoint_callback],
-                        validation_split = 0.2)
+                        validation_split = 0.3)
 
     return model, history
 

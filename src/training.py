@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import pandas as pd
 from scipy.io import loadmat
 from config import *
 from neuralnet import sylnet_model, TransformerBlock
@@ -50,7 +51,7 @@ def netTrain(tensor, syllables, epochs, batch_size, n_channels):
     return model, history
 
 
-def netTest(tensor, syllables, model, batch_size):
+def netTest(tensor, syllables, model, batch_size, language):
     """
 
     :param tensor:
@@ -61,6 +62,17 @@ def netTest(tensor, syllables, model, batch_size):
     """
 
     print("\nLoading testing data...", "\n")
+
+    # Find indices of tensors with duration less than or equal to T seconds
+    csv = r"resources/csv" + "\\" + language + ".csv"
+    df = pd.read_csv(csv)
+    audio_durations = df['Audio duration'].to_numpy()
+    T = tensor.shape[1] / 100
+    valid_indices = np.where(audio_durations <= T)[0]
+
+    # Filter to only keep valid indices
+    tensor = tensor[valid_indices, :, :]
+    syllables = syllables[valid_indices]
 
     # Remove any zeros from the annotations
     valid_indices = np.where(syllables != 0)[0]

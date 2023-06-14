@@ -14,3 +14,8 @@ training_loc = r"G:\Research\DSPNN\resources\data\Training"
 # Where the testing data is located.
 testing_loc = r"G:\Research\DSPNN\resources\data\Testing"
 
+# Test csv location.
+estonian_csv_loc = r"resources/csv/Estonian.csv"
+english_csv_loc = r"resources/csv/English.csv"
+
+

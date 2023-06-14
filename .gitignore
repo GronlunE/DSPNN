@@ -45,3 +45,5 @@ Thumbs.db
 
 # Directory
 resources
+.idea
+__pycache__
